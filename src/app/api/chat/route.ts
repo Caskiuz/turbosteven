@@ -8,12 +8,15 @@
  */
 import { NextRequest } from "next/server";
 import { instruccionesSistema } from "@/lib/chat/conocimiento";
-import { consultarPedido } from "@/lib/chat/consultar-pedido";
+import { consultarPedido, type InfoPedido } from "@/lib/chat/consultar-pedido";
 
 export const runtime = "nodejs";
+// el streaming + function calling puede tardar; Hobby permite hasta 60 s
+export const maxDuration = 60;
 
-const MODELOS = ["gemini-2.5-flash", "gemini-flash-latest"];
+const MODELOS = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"];
 const API = "https://generativelanguage.googleapis.com/v1beta/models";
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const DECLARACIONES = [
   {
@@ -120,6 +123,19 @@ export async function POST(req: NextRequest) {
       try {
         const contenidos: Contenido[] = [...historial, { role: "user", parts: [{ text: mensaje }] }];
         let resultado = "";
+        let ultimaInfoPedido: InfoPedido | null = null;
+        let consultaSinResultado = false;
+
+        // pre-consulta determinista: si el usuario mencionó un código TSA-XXXX,
+        // se obtiene el estado YA (independiente de que el modelo esté saturado)
+        const coincidenciaCodigo = mensaje.match(/TSA[-\s]?(\d{1,5})/i);
+        if (coincidenciaCodigo) {
+          try {
+            const info = await consultarPedido(`TSA-${coincidenciaCodigo[1].padStart(4, "0")}`);
+            ultimaInfoPedido = info;
+            consultaSinResultado = !info;
+          } catch { /* BD caída: seguimos, Gemini puede responder de forma general */ }
+        }
 
         for (let iter = 0; iter < 3; iter++) {
           const payload = {
@@ -131,26 +147,46 @@ export async function POST(req: NextRequest) {
 
           let partes: ParteGemini[] = [];
           let errorUltimo: Error | null = null;
-          for (const modelo of MODELOS) {
-            try {
-              const chunks: ParteGemini[] = [];
-              for await (const parte of streamGemini(modelo, key, payload)) {
-                if (parte.text) {
-                  emit({ t: "d", v: parte.text });
-                  resultado += parte.text;
+          for (let intento = 0; intento < 2; intento++) {
+            for (const modelo of MODELOS) {
+              try {
+                const chunks: ParteGemini[] = [];
+                for await (const parte of streamGemini(modelo, key, payload)) {
+                  if (parte.text) {
+                    emit({ t: "d", v: parte.text });
+                    resultado += parte.text;
+                  }
+                  chunks.push(parte);
                 }
-                chunks.push(parte);
+                partes = chunks;
+                // el modelo a veces responde 200 sin contenido (quirk thinking 0 + tools): reintentar
+                errorUltimo = partes.length === 0 ? new Error("respuesta vacía del modelo") : null;
+                if (!errorUltimo) break;
+              } catch (e) {
+                errorUltimo = e as Error;
+                // sobrecarga o límite de cuota: breve espera y sigue con el siguiente modelo
+                if (/\b(429|503)\b/.test(errorUltimo.message)) await delay(1200);
               }
-              partes = chunks;
-              errorUltimo = null;
-              break;
-            } catch (e) {
-              errorUltimo = e as Error;
             }
+            if (!errorUltimo) break;
+            if (intento === 0) await delay(2000); // segunda ronda completa ante sobrecarga
           }
-          if (errorUltimo) throw errorUltimo;
 
           const calls = partes.filter((p) => p.functionCall).map((p) => p.functionCall!);
+
+          if (errorUltimo) {
+            // degradación elegante: si ya consultamos la BD, respondemos con formato local
+            if (ultimaInfoPedido || consultaSinResultado) {
+              const texto = ultimaInfoPedido
+                ? `📦 El pedido **${ultimaInfoPedido.codigo}** — ${ultimaInfoPedido.producto} — está en estado **${ultimaInfoPedido.estado_nombre}** ${ultimaInfoPedido.estado === "en_fabricacion" ? "🛠️" : "✨"} con ${ultimaInfoPedido.responsable ?? "el taller"}. Entrega prevista: ${ultimaInfoPedido.fecha_entrega}. ¡Va muy bien! 🎵`
+                : "🔍 No encontré ninguna comanda con ese código. Revisa el formato (ej. TSA-0004) o consulta con tu vendedor.";
+              emit({ t: "d", v: texto });
+              resultado += texto;
+              break;
+            }
+            throw errorUltimo;
+          }
+
           if (!calls.length) break; // respuesta completa
 
           contenidos.push({ role: "model", parts: partes });
@@ -160,8 +196,11 @@ export async function POST(req: NextRequest) {
               let respuesta: object;
               try {
                 const info = await consultarPedido(String(call.args?.codigo ?? ""));
+                ultimaInfoPedido = info;
+                consultaSinResultado = !info;
                 respuesta = { encontrado: !!info, pedido: info ?? null };
-              } catch (e) {
+              } catch {
+                consultaSinResultado = true;
                 respuesta = { encontrado: false, error: "La base de datos no está disponible en este momento" };
               }
               contenidos.push({
@@ -179,7 +218,7 @@ export async function POST(req: NextRequest) {
 
         emit({ t: "done", v: resultado });
       } catch (e) {
-        emit({ t: "err", v: "Steven IA está tomando aire — intenta de nuevo en unos segundos." });
+        emit({ t: "err", v: "Steven IA está saturado ahora mismo — intenta de nuevo en unos segundos." });
         emit({ t: "done" });
       } finally {
         controller.close();
