@@ -1,0 +1,24 @@
+# dependencias y build
+node_modules/
+.next/
+out/
+.vercel/
+
+# entorno — NUNCA commitear claves
+.env
+.env.local
+.env*.local
+
+# assets de marca originales (viven procesados en public/brand)
+brandingyproductos/
+
+# sistema / editor
+.DS_Store
+Thumbs.db
+*.log
+*.tsbuildinfo
+next-env.d.ts
+.neon
+
+# sesión del agente
+.zcode/
