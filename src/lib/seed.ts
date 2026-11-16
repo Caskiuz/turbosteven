@@ -112,6 +112,12 @@ export async function sembrarDemo(s: NeonQueryFunction<false, false>) {
     await s`
       INSERT INTO pedido_historial (pedido_id, usuario_id, accion, detalle, creado)
       VALUES (${pid}, ${idsU[p.vendedor]}, ${"Pedido creado"}, ${`Comanda ${codigo} registrada por ${USUARIOS[p.vendedor].nombre}`}, ${hace(p.inicio)})`;
+    // abono de la demo -> movimiento del libro contable
+    if (p.abono > 0) {
+      await s`
+        INSERT INTO pagos (pedido_id, monto, nota, usuario_id, creado)
+        VALUES (${pid}, ${p.abono}, ${"Abono de apartado"}, ${idsU[p.vendedor]}, ${hace(p.inicio)})`;
+    }
     if (p.estado !== "pendiente") {
       await s`
         INSERT INTO pedido_historial (pedido_id, usuario_id, accion, detalle, creado)

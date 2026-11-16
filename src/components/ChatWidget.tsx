@@ -92,7 +92,7 @@ export default function ChatWidget() {
         animate={{ scale: 1, rotate: 0 }}
         transition={{ delay: 1.2, type: "spring", stiffness: 260, damping: 18 }}
         onClick={() => setAbierto((v) => !v)}
-        className="no-imprimir fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl md:h-16 md:w-16"
+        className="no-imprimir fixed bottom-[4.6rem] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-2xl md:bottom-5 md:right-5 md:h-16 md:w-16"
         style={{ background: "linear-gradient(135deg,#5b2be0,#b04fff)" }}
         aria-label="Abrir chat con Steven IA"
       >

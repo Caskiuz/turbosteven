@@ -110,7 +110,30 @@ export default function PedidosPage() {
             })}
           </div>
         ) : (
-          <div className="tarjeta-brillo overflow-hidden rounded-2xl">
+          <>
+          {/* móvil: tarjetas */}
+          <div className="space-y-2.5 lg:hidden">
+            {filtrados.map((p) => (
+              <Link key={p.id} href={`/pedidos/${p.id}`} className="tarjeta-brillo flex items-center gap-3 rounded-2xl p-3.5">
+                {p.fotos?.[0] && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.fotos[0]} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-xs font-bold text-[#35d6ff]">{p.codigo} <span className="text-[#8b85a3]">· {p.responsable_nombre ?? "sin asignar"}</span></p>
+                  <p className="truncate text-sm font-semibold text-white">{p.producto}</p>
+                  <p className="truncate text-xs text-[#9d97b8]">👤 {p.cliente_nombre}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <EstadoBadge estado={p.estado} tam="sm" />
+                    <EntregaBadge fecha={p.fecha_entrega} />
+                  </div>
+                </div>
+                <span className="shrink-0 text-sm font-bold text-[#ffd400]">{formatoCOP(p.precio)}</span>
+              </Link>
+            ))}
+          </div>
+          {/* escritorio: tabla */}
+          <div className="tarjeta-brillo hidden overflow-hidden rounded-2xl lg:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
@@ -142,6 +165,7 @@ export default function PedidosPage() {
               </table>
             </div>
           </div>
+          </>
         )}
     </div>
   );

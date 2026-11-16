@@ -58,7 +58,23 @@ export default function ClientesPage() {
       </div>
 
       {clientes === null ? <Cargando /> : filtrados.length === 0 ? <Vacio texto="No hay clientes que coincidan." /> : (
-        <div className="tarjeta-brillo overflow-hidden rounded-2xl">
+        <>
+        {/* móvil: tarjetas */}
+        <div className="space-y-2.5 lg:hidden">
+          {filtrados.map((c) => (
+            <div key={c.id} className="tarjeta-brillo rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate font-semibold text-white">{c.nombre}</p>
+                <span className="shrink-0 rounded-full bg-[rgba(53,214,255,0.15)] px-2.5 py-0.5 text-xs font-bold text-[#35d6ff]">{c.pedidos} pedido(s)</span>
+              </div>
+              <a href={`https://wa.me/57${c.telefono.replace(/\s/g, "")}`} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-sm text-[#22dd88]">📱 {c.telefono}</a>
+              {c.direccion && <p className="mt-1 text-xs text-[#9d97b8]">📍 {c.direccion}</p>}
+              {c.notas && <p className="mt-1 text-xs text-[#8b85a3]">📝 {c.notas}</p>}
+            </div>
+          ))}
+        </div>
+        {/* escritorio: tabla */}
+        <div className="tarjeta-brillo hidden overflow-hidden rounded-2xl lg:block">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
@@ -92,6 +108,7 @@ export default function ClientesPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
       {/* modal crear cliente */}

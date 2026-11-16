@@ -30,6 +30,7 @@ export default function AppShell({ sesion, children }: { sesion: SesionUI; child
         { href: "/pedidos", icono: "📋", texto: "Pedidos" },
         { href: "/clientes", icono: "👥", texto: "Clientes" },
         { href: "/historial", icono: "🕓", texto: "Historial" },
+        ...(esAdmin ? [{ href: "/contabilidad", icono: "📒", texto: "Contabilidad" }] : []),
         ...(esAdmin ? [{ href: "/usuarios", icono: "🔐", texto: "Usuarios" }] : []),
       ];
 

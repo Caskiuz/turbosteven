@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     especificaciones?: string; precio?: number; abono?: number;
     fecha_entrega?: string; responsable_id?: number | null;
     fotosAdicionales?: string[];
+    registrar_pago?: number;
   };
   if (!body) return NextResponse.json({ error: "Cuerpo inválido" }, { status: 400 });
 
@@ -75,6 +76,27 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (!body.producto && !body.medidas && !(body.fotosAdicionales?.length)) {
       return NextResponse.json({ ok: true, estado: body.estado });
     }
+  }
+
+  /* --- registrar abono / pago (admin, vendedor; también taller sobre su pedido) --- */
+  if (body.registrar_pago !== undefined) {
+    const monto = Math.round(Number(body.registrar_pago));
+    if (!monto || monto <= 0) {
+      return NextResponse.json({ error: "El monto del abono debe ser mayor a cero" }, { status: 400 });
+    }
+    if (!puedeCambiar && !esTallerConEstePedido) {
+      return NextResponse.json({ error: "Sin permiso para registrar abonos" }, { status: 403 });
+    }
+    await s`
+      INSERT INTO pagos (pedido_id, monto, nota, usuario_id)
+      VALUES (${pid}, ${monto}, ${`Abono registrado por ${sesion.nombre}`}, ${sesion.id})`;
+    await s`
+      UPDATE pedidos SET abono = COALESCE(abono, 0) + ${monto}, actualizado = now() WHERE id = ${pid}`;
+    await s`
+      INSERT INTO pedido_historial (pedido_id, usuario_id, accion, detalle)
+      VALUES (${pid}, ${sesion.id}, ${"Abono registrado"},
+        ${`${sesion.nombre} registró un abono de $${monto.toLocaleString("es-CO")}`})`;
+    return NextResponse.json({ ok: true, abono: Number(pedido.abono ?? 0) + monto });
   }
 
   /* --- edición completa (admin, vendedor) --- */

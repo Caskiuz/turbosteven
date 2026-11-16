@@ -30,6 +30,9 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/usuarios") && !esAdmin) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
+  if (pathname.startsWith("/contabilidad") && !esAdmin) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
   if (pathname.startsWith("/historial") && esTaller) {
     return NextResponse.redirect(new URL("/taller", req.url));
   }

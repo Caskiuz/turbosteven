@@ -82,9 +82,23 @@ async function inicializar(): Promise<Sql> {
     detalle text,
     creado timestamptz NOT NULL DEFAULT now()
   )`);
+  await s.query(`CREATE TABLE IF NOT EXISTS pagos (
+    id serial PRIMARY KEY,
+    pedido_id integer NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    monto numeric(12,0) NOT NULL,
+    nota text,
+    usuario_id integer REFERENCES usuarios(id),
+    creado timestamptz NOT NULL DEFAULT now()
+  )`);
   await s.query(
     `CREATE SEQUENCE IF NOT EXISTS pedido_numero_seq AS integer START 1`
   );
+  // relleno idempotente: los abonos ya existentes entran al libro contable una sola vez
+  await s.query(`
+    INSERT INTO pagos (pedido_id, monto, nota, usuario_id, creado)
+    SELECT p.id, p.abono, 'Abono registrado', p.vendedor_id, p.creado
+    FROM pedidos p
+    WHERE p.abono > 0 AND NOT EXISTS (SELECT 1 FROM pagos g WHERE g.pedido_id = p.id)`);
   await sembrarDemo(s);
   return s;
 }

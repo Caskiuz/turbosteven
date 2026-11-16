@@ -66,7 +66,29 @@ export default function HistorialPage() {
       </div>
 
       {filtrados.length === 0 ? <Vacio texto="No hay pedidos en el historial con esos filtros." /> : (
-        <div className="tarjeta-brillo overflow-hidden rounded-2xl">
+        <>
+        {/* móvil: tarjetas */}
+        <div className="space-y-2.5 lg:hidden">
+          {filtrados.map((p) => (
+            <div key={p.id} className="tarjeta-brillo rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-2">
+                <Link href={`/pedidos/${p.id}`} className="font-display text-sm font-bold text-[#35d6ff]">{p.codigo}</Link>
+                <EstadoBadge estado={p.estado} tam="sm" />
+              </div>
+              <p className="mt-1 truncate text-sm font-semibold text-white">{p.producto}</p>
+              <p className="text-xs text-[#9d97b8]">👤 {p.cliente_nombre} · {p.vendedor_nombre ?? "—"}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-xs text-[#8b85a3]">📅 {fechaCorta(p.fecha_entrega ?? p.creado)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-[#ffd400]">{formatoCOP(p.precio)}</span>
+                  <Link href={`/comanda/${p.id}`} className="rounded-lg border border-[rgba(154,79,255,0.4)] px-2.5 py-1 text-[11px] text-[#cfc9e8]">🧾 PDF</Link>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* escritorio: tabla */}
+        <div className="tarjeta-brillo hidden overflow-hidden rounded-2xl lg:block">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead>
@@ -104,6 +126,7 @@ export default function HistorialPage() {
             </table>
           </div>
         </div>
+        </>
       )}
     </div>
   );

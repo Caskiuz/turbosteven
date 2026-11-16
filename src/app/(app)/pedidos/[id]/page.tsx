@@ -26,6 +26,8 @@ export default function DetallePedidoPage() {
   const [error, setError] = useState<string | null>(null);
   const [cambiando, setCambiando] = useState(false);
   const [fotoActiva, setFotoActiva] = useState(0);
+  const [modalAbono, setModalAbono] = useState(false);
+  const [montoAbono, setMontoAbono] = useState("");
 
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/pedidos/${id}`);
@@ -49,6 +51,28 @@ export default function DetallePedidoPage() {
         body: JSON.stringify({ estado }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "No se pudo cambiar el estado");
+      await cargar();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setCambiando(false);
+    }
+  }
+
+  async function registrarAbono() {
+    if (!p) return;
+    const monto = Number(montoAbono);
+    if (!monto || monto <= 0) return;
+    setCambiando(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/pedidos/${p.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registrar_pago: monto }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "No se pudo registrar el abono");
+      setModalAbono(false);
+      setMontoAbono("");
       await cargar();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
@@ -165,7 +189,14 @@ export default function DetallePedidoPage() {
         {/* valores + timeline */}
         <div className="space-y-6 lg:col-span-2">
           <div className="tarjeta-brillo rounded-2xl p-6">
-            <h2 className="font-display text-sm font-bold tracking-wide text-[#ffd400]">💵 VALORES</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-sm font-bold tracking-wide text-[#ffd400]">💵 VALORES</h2>
+              {saldo > 0 && p.estado !== "cancelado" && (
+                <button onClick={() => setModalAbono(true)} className="rounded-lg border border-[rgba(34,221,136,0.5)] px-3 py-1.5 text-xs font-semibold text-[#22dd88] transition hover:bg-[rgba(34,221,136,0.12)]">
+                  + Abono
+                </button>
+              )}
+            </div>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-[#9d97b8]">Precio</span><span className="font-bold text-white">{formatoCOP(p.precio)}</span></div>
               <div className="flex justify-between"><span className="text-[#9d97b8]">Abono</span><span className="text-[#22dd88]">− {formatoCOP(p.abono)}</span></div>
@@ -194,6 +225,29 @@ export default function DetallePedidoPage() {
           </div>
         </div>
       </div>
+
+      {/* modal registrar abono */}
+      {modalAbono && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setModalAbono(false)}>
+          <div className="tarjeta-brillo w-full max-w-sm rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-display text-lg font-bold text-white">Registrar abono</h3>
+            <p className="mt-1 text-xs text-[#9d97b8]">{p.codigo} · saldo actual {formatoCOP(saldo)}</p>
+            <input className="campo mt-4" type="number" min={1} placeholder="Monto del abono (COP)" value={montoAbono} onChange={(e) => setMontoAbono(e.target.value)} />
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[50000, 100000, 200000].map((v) => (
+                <button key={v} onClick={() => setMontoAbono(String(v))} className="rounded-full border border-[rgba(154,79,255,0.4)] px-3 py-1 text-xs text-[#cfc9e8]">{formatoCOP(v)}</button>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button onClick={registrarAbono} disabled={cambiando || !montoAbono}
+                className="btn-marca flex-1 rounded-xl py-2.5 font-bold text-white disabled:opacity-50">
+                {cambiando ? "Registrando…" : "Registrar"}
+              </button>
+              <button onClick={() => setModalAbono(false)} className="rounded-xl border border-[rgba(154,79,255,0.4)] px-5 text-sm text-[#b8b3cf]">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

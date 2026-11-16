@@ -33,6 +33,9 @@ export default function NuevoPedidoPage() {
     fecha_entrega: "", responsable_id: "",
   });
   const [fotos, setFotos] = useState<{ src: string; nombre: string }[]>([]);
+  const [modalCliente, setModalCliente] = useState(false);
+  const [guardandoCliente, setGuardandoCliente] = useState(false);
+  const [clienteNuevo, setClienteNuevo] = useState({ nombre: "", telefono: "", direccion: "", notas: "" });
 
   useEffect(() => {
     fetch("/api/clientes").then(async (r) => r.ok ? r.json() : []).then(setClientes).catch(() => {});
@@ -57,18 +60,19 @@ export default function NuevoPedidoPage() {
   }
 
   async function crearClienteRapido() {
-    const nombre = prompt("Nombre del nuevo cliente:");
-    if (!nombre?.trim()) return;
-    const telefono = prompt("Teléfono de contacto:") ?? "";
-    if (!telefono.trim()) { setError("El teléfono es obligatorio para el cliente."); return; }
+    setError(null);
+    setGuardandoCliente(true);
     const res = await fetch("/api/clientes", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nombre, telefono }),
+      body: JSON.stringify(clienteNuevo),
     });
+    setGuardandoCliente(false);
     if (res.ok) {
       const c = await res.json();
-      setClientes((cs) => [...cs, { id: c.id, nombre, telefono }]);
+      setClientes((cs) => [...cs, { id: c.id, nombre: clienteNuevo.nombre, telefono: clienteNuevo.telefono }]);
       setForm((f) => ({ ...f, cliente_id: String(c.id) }));
+      setModalCliente(false);
+      setClienteNuevo({ nombre: "", telefono: "", direccion: "", notas: "" });
     } else {
       const d = await res.json().catch(() => ({}));
       setError(d.error ?? "No se pudo crear el cliente");
@@ -121,11 +125,33 @@ export default function NuevoPedidoPage() {
               <option value="">Selecciona un cliente…</option>
               {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre} · {c.telefono}</option>)}
             </select>
-            <button onClick={crearClienteRapido} type="button"
+            <button onClick={() => setModalCliente(true)} type="button"
               className="shrink-0 rounded-xl border border-[rgba(53,214,255,0.5)] px-4 text-sm font-semibold text-[#35d6ff] transition hover:bg-[rgba(53,214,255,0.12)]">
               + Nuevo
             </button>
           </div>
+
+          {/* modal de nuevo cliente */}
+          {modalCliente && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setModalCliente(false)}>
+              <div className="tarjeta-brillo w-full max-w-md rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                <h3 className="font-display text-lg font-bold text-white">Nuevo cliente</h3>
+                <div className="mt-4 space-y-3">
+                  <input className="campo" placeholder="Nombre completo *" value={clienteNuevo.nombre} onChange={(e) => setClienteNuevo({ ...clienteNuevo, nombre: e.target.value })} />
+                  <input className="campo" placeholder="Teléfono / WhatsApp *" value={clienteNuevo.telefono} onChange={(e) => setClienteNuevo({ ...clienteNuevo, telefono: e.target.value })} />
+                  <input className="campo" placeholder="Dirección" value={clienteNuevo.direccion} onChange={(e) => setClienteNuevo({ ...clienteNuevo, direccion: e.target.value })} />
+                  <textarea className="campo" rows={2} placeholder="Notas (preferencias, historial…)" value={clienteNuevo.notas} onChange={(e) => setClienteNuevo({ ...clienteNuevo, notas: e.target.value })} />
+                </div>
+                <div className="mt-5 flex gap-3">
+                  <button onClick={crearClienteRapido} disabled={guardandoCliente || !clienteNuevo.nombre.trim() || !clienteNuevo.telefono.trim()}
+                    className="btn-marca flex-1 rounded-xl py-2.5 font-bold text-white disabled:opacity-50">
+                    {guardandoCliente ? "Guardando…" : "Guardar cliente"}
+                  </button>
+                  <button onClick={() => setModalCliente(false)} className="rounded-xl border border-[rgba(154,79,255,0.4)] px-5 text-sm text-[#b8b3cf]">Cancelar</button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* producto */}
