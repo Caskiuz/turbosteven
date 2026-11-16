@@ -59,7 +59,7 @@ export default function Landing() {
       </nav>
 
       {/* ============ HERO ============ */}
-      <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden">
+      <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden pt-20 md:pt-16">
         <div className="absolute inset-0 opacity-70">
           <WaveCanvas className="h-full w-full" />
         </div>
