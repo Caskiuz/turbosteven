@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql, filas } from "@/lib/db";
 import { sesionActual } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
+import { notificar, idsAdministradores } from "@/lib/notificar";
 import { BASE_SELECT, serializar, type FilaPedido } from "@/lib/pedidos-query";
 
 export const runtime = "nodejs";
@@ -88,6 +89,20 @@ export async function POST(req: NextRequest) {
   await s`
     INSERT INTO pedido_historial (pedido_id, usuario_id, accion, detalle)
     VALUES (${pid}, ${sesion.id}, ${"Pedido creado"}, ${`Comanda ${codigo} registrada por ${sesion.nombre}`})`;
+
+  // notificaciones: al responsable asignado y a los administradores
+  const admins = await idsAdministradores(s);
+  await notificar(
+    s,
+    [...(body.responsable_id ? [body.responsable_id] : []), ...admins],
+    {
+      titulo: body.responsable_id ? "Nueva comanda asignada" : "Nueva comanda creada",
+      mensaje: `${codigo} - ${body.producto.trim()} (registrada por ${sesion.nombre})`,
+      tipo: "info",
+      enlace: `/pedidos/${pid}`,
+    },
+    sesion.id
+  );
 
   return NextResponse.json({ id: pid, codigo }, { status: 201 });
 }

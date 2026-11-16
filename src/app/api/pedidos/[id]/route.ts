@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql, filas } from "@/lib/db";
 import { sesionActual } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
+import { notificar, idsAdministradores } from "@/lib/notificar";
 import { BASE_SELECT, serializar, type FilaPedido } from "@/lib/pedidos-query";
-import type { Estado } from "@/lib/tipos";
+import { nombreEstado, type Estado } from "@/lib/tipos";
 
 export const runtime = "nodejs";
 
@@ -73,6 +74,21 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       INSERT INTO pedido_historial (pedido_id, usuario_id, accion, detalle)
       VALUES (${pid}, ${sesion.id}, ${"Estado: " + body.estado},
         ${`${sesion.nombre} cambió el estado de "${pedido.estado.replace("_", " ")}" a "${body.estado.replace("_", " ")}"`})`;
+
+    // notificaciones del cambio de estado: responsable, vendedor y administradores
+    const adminsEstado = await idsAdministradores(s);
+    await notificar(
+      s,
+      [pedido.responsable_id, pedido.vendedor_id, ...adminsEstado],
+      {
+        titulo: `${pedido.codigo} - ${nombreEstado(body.estado)}`,
+        mensaje: `${sesion.nombre} movió "${pedido.producto}" de ${pedido.estado.replace("_", " ")} a ${body.estado.replace("_", " ")}`,
+        tipo: body.estado === "listo" || body.estado === "entregado" ? "exito" : "alerta",
+        enlace: `/pedidos/${pid}`,
+      },
+      sesion.id
+    );
+
     if (!body.producto && !body.medidas && !(body.fotosAdicionales?.length)) {
       return NextResponse.json({ ok: true, estado: body.estado });
     }
@@ -96,6 +112,20 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       INSERT INTO pedido_historial (pedido_id, usuario_id, accion, detalle)
       VALUES (${pid}, ${sesion.id}, ${"Abono registrado"},
         ${`${sesion.nombre} registró un abono de $${monto.toLocaleString("es-CO")}`})`;
+
+    // notificación del abono: vendedor y administradores
+    const adminsAbono = await idsAdministradores(s);
+    await notificar(
+      s,
+      [pedido.vendedor_id, ...adminsAbono],
+      {
+        titulo: `${pedido.codigo} - Abono de $${monto.toLocaleString("es-CO")}`,
+        mensaje: `${sesion.nombre} registró un abono para "${pedido.producto}"`,
+        tipo: "exito",
+        enlace: `/pedidos/${pid}`,
+      },
+      sesion.id
+    );
     return NextResponse.json({ ok: true, abono: Number(pedido.abono ?? 0) + monto });
   }
 

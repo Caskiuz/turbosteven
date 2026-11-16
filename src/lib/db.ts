@@ -90,6 +90,16 @@ async function inicializar(): Promise<Sql> {
     usuario_id integer REFERENCES usuarios(id),
     creado timestamptz NOT NULL DEFAULT now()
   )`);
+  await s.query(`CREATE TABLE IF NOT EXISTS notificaciones (
+    id serial PRIMARY KEY,
+    usuario_id integer NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    titulo text NOT NULL,
+    mensaje text,
+    tipo text NOT NULL DEFAULT 'info',
+    enlace text,
+    leida boolean NOT NULL DEFAULT false,
+    creado timestamptz NOT NULL DEFAULT now()
+  )`);
   await s.query(
     `CREATE SEQUENCE IF NOT EXISTS pedido_numero_seq AS integer START 1`
   );

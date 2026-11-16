@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import Campana from "./Campana";
 
 export interface SesionUI { id: number; nombre: string; rol: "admin" | "vendedor" | "taller" }
 
@@ -49,14 +50,17 @@ export default function AppShell({ sesion, children }: { sesion: SesionUI; child
     <div className="min-h-[100svh] bg-[#0a0614]">
       {/* ===== sidebar escritorio ===== */}
       <aside className="no-imprimir fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-[rgba(154,79,255,0.25)] bg-[#130a26] lg:flex">
-        <Link href="/" className="flex items-center gap-2.5 border-b border-[rgba(154,79,255,0.2)] px-5 py-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/ts-icon-white.png" alt="" className="h-8 w-auto" />
-          <div>
-            <p className="font-display text-xs font-extrabold tracking-[0.15em] text-white">TURBO STEVEN</p>
-            <p className="text-[10px] tracking-[0.3em] text-[#9a4fff]">AUDIO · COMANDAS</p>
-          </div>
-        </Link>
+        <div className="flex items-center justify-between border-b border-[rgba(154,79,255,0.2)] px-4 py-3">
+          <Link href="/" className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/ts-icon-white.png" alt="" className="h-8 w-auto" />
+            <div>
+              <p className="font-display text-xs font-extrabold tracking-[0.15em] text-white">TURBO STEVEN</p>
+              <p className="text-[10px] tracking-[0.3em] text-[#9a4fff]">AUDIO · COMANDAS</p>
+            </div>
+          </Link>
+          <Campana />
+        </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {items.map((it) => (
@@ -102,9 +106,12 @@ export default function AppShell({ sesion, children }: { sesion: SesionUI; child
           <img src="/brand/ts-icon-white.png" alt="" className="h-7 w-auto" />
           <span className="font-display text-xs font-extrabold tracking-[0.15em] text-white">TURBO STEVEN AUDIO</span>
         </Link>
-        <button onClick={salir} disabled={saliendo} className="rounded-lg border border-[rgba(255,92,122,0.4)] px-3 py-1.5 text-xs text-[#ff5c7a]" aria-label="Cerrar sesión">
-          Salir
-        </button>
+        <div className="flex items-center gap-2">
+          <Campana />
+          <button onClick={salir} disabled={saliendo} className="rounded-lg border border-[rgba(255,92,122,0.4)] px-3 py-1.5 text-xs text-[#ff5c7a]" aria-label="Cerrar sesión">
+            Salir
+          </button>
+        </div>
       </header>
 
       {/* ===== tab bar móvil ===== */}
